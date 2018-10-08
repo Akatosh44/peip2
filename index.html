@@ -1,0 +1,1018 @@
+<!doctype html>
+<!--
+@FILE: index.html
+@AUTHOR: Julien LANGLOIS
+@INST: LS2N UMR 6004
+-->
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>Traitement de l'image</title>
+		<link rel="icon" href="media/images/page_logo.png">
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/reveal.scss">
+		<link rel="stylesheet" href="css/theme/polytech.css">
+		<link rel="stylesheet" href="css/matrices.css">
+		<link rel="stylesheet" href="css/special_items.css">
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+		<link href="node_modules/cropperjs/dist/cropper.css" rel="stylesheet">
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<!--------------------------->
+				<section>
+					<h6>Traitement de l'image</h6>
+					<p>PEIP2 - Algo</p>
+					<p><small><i>9/10/2018</i></small></p>
+					<img src='media/images/polytech.png' class='plain' height="200">
+					<p><small>Julien LANGLOIS</br>
+						<small><i>LS2N IPI - UMR CNRS 6004</br>
+						Multitude-Technologies @ Wedo</br></br>
+						<b>julien.langlois@univ-nantes.fr</b></i></small></small></p>
+				</section>
+				<!--------------------------->
+				<section>
+					<h6>Connaissances</h6>
+					<small>Définitions - Opérations - Analyse descendante</small>
+				  </br></br>
+					<h6>Outils</h6>
+					<small>Linux - Python 3.5 - Numpy - OpenCV</small>
+				</section>
+				<!--------------------------->
+				<section>
+					<!--------------------------->
+					<section>
+						<h6>Introduction</h6>
+					</section>
+					<!--------------------------->
+					<section>
+						<p>
+							Une image est une <b>représentation</b> visuelle/perceptive de <b>quelque chose</b>.
+						</p>
+					</br>
+						<p>
+							<ul>
+								<li><b>Que</b> représenter ?</li>
+								<ul style="list-style: none;">
+									<li><small>un paysage, de la lumière, un sentiment...</small></li>
+								</ul>
+								<li><b>Comment</b> le représenter ?</li>
+								<ul style="list-style: none;">
+									<li><small>support, codage, impression...</small></li>
+								</ul>
+							</dl>
+					</section>
+					<!--------------------------->
+					<section>
+						<p>Dans notre cas, l'image est une représentation visuelle d'une scène.</p>
+						<img class='plain' src='media/images/lena.png' height=400px >
+						<figcaption>
+							Célèbre image de Lena
+						</figcaption>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Formalisation</h6>
+							<svg id="stenopesvg" width="100%" height="400px">
+								<defs>
+								    <marker id="startarrow" markerWidth="10" markerHeight="7"
+								    refX="10" refY="3.5" orient="auto">
+								      <polygon points="10 1, 10 6, 5 3.5" fill="red" />
+								    </marker>
+								    <marker id="endarrow" markerWidth="10" markerHeight="7"
+								    refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+								        <polygon points="0 1, 5 3.5, 0 6" fill="red" />
+								    </marker>
+										<marker id="endarrowflat" markerWidth="10" markerHeight="8"
+										refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+												<polygon points="0 0, 10 4, 0 8" fill="black" />
+										</marker>
+								  </defs>
+								<line x1="70" y1="200" x2="70" y2="50" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+								<line x1="70" y1="200" x2="900" y2="200" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+							  <line id="sensor" x1="70" y1="150" x2="70" y2="250" style="stroke:rgb(0,0,0);stroke-width:4" />
+							  <line id="borderup" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="5, 5" style="stroke:rgb(255,0,0);stroke-width:1" />
+							  <line id="borderdown" x1="0" y1="0" x2="0" y2="0" stroke-dasharray="5, 5" style="stroke:rgb(255,0,0);stroke-width:1" />
+							  <line id="object" x1="400" y1="130" x2="400" y2="270" style="stroke:rgb(0,0,255);stroke-width:10" />
+								<text id="objecttext" x="410" y="180" font-family="Verdana" font-size="18">objet</text>
+							  <line id="objectup" x1="400" y1="130" x2="400" y2="270" style="stroke:rgb(0,0,255);stroke-width:2" />
+							  <line id="objectdown" x1="400" y1="130" x2="400" y2="270" style="stroke:rgb(0,0,255);stroke-width:2" />
+							  <line id="oproj" x1="400" y1="130" x2="400" y2="270" style="stroke:rgb(0,0,255);stroke-width:10" />
+								<text x="900" y="180" font-family="Verdana" font-size="18">Z</text>
+								<text x="80" y="50" font-family="Verdana" font-size="18">X</text>
+								<text x="0" y="205" font-family="Verdana" font-size="18">capteur</text>
+								<text id="lenstext" x="95" y="340" font-family="Verdana" font-size="18">lentille</text>
+								<line id="lens" x1="50" y1="100" x2="50" y2="300" style="stroke:rgb(255,0,0);stroke-width:4" marker-end="url(#endarrow)" marker-start="url(#startarrow)"/>
+							</svg>
+							<div style="width:100%;margin:auto">
+								<div style="width:150px;display:inline-block;">
+									<p><small>xo=140mm</small></br>
+									<small id="objectsensorsize">xc=55mm</small></p>
+								</div>
+								<div class="thinslidecontainer" style="width:250px;display:inline-block;">
+									<input type="range" min="100" max="330" value="150" class="thinslider" id="focalslider" style="width:200px;display:inline-block;"></br>
+									<span id="focalslidervalue"></span>
+								</div>
+								<div class="thinslidecontainer" style="width:250px;display:inline-block;margin:auto;">
+									<input type="range" min="240" max="870" value="600" class="thinslider" id="objectslider" style="width:200px;display:inline-block;"></br>
+									<span id="objectslidervalue"></span>
+								</div>
+								<div style="width:150px;display:inline-block;vertical-align:top;margin-top:30px;margin-left:50px;">
+									<!-- <p style="visibility:hidden">$x_c=\frac{x_o\times f}{z}$</p> !-->
+									<div class="goldhover" id="stenopeformula" style="width:50px;height:50px;border:1px solid black;">
+										<div id="stenopeformulalatex" style="position:absolute;margin-left:15px;visibility:hidden">$x_c = \frac{x_o\times f}{z}$</div>
+										<div id="stenopeformulamark" style="position:absolute;margin-left:15px">?</div>
+									</div>
+								</div>
+							</div>
+					</section>
+					<section>
+						<p>L'acquisition d'une image numérique</p>
+						<div style="margin-bottom:20px;">
+							<figcaption>La lumière de la scène impacte les photosites d'un capteur (organisés en grille).</figcaption>
+						</div>
+						<div style="overflow:hidden;">
+							<div style="float:left;width:60%">
+								<div class="img-container">
+									<img src="media/images/scene.jpg" alt="Picture">
+								</div>
+							</div>
+							<div style="width:40%;float:left;">
+								<div id="actions">
+										<button class="docs-buttons image" type="button"></button>
+									<div id="getCroppedCanvasModal" style="margin:20px">
+										<div class="modal-body" ></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div style="width:100%">
+						</br>
+							<small>Taille de la grille de capteurs :</small>
+							<input class='nocircle' type='radio' value='25' name='sensor_size' id='radio0'/>
+							<label class='imgselect' for='radio0'>25x14</label>
+							<input class='nocircle' type='radio' value='50' name='sensor_size' id='radio1'/>
+							<label class='imgselect' for='radio1'>50x28</label>
+							<input class='nocircle' type='radio' value='100' name='sensor_size' id='radio2' />
+							<label class='imgselect' for='radio2'>100x56</label>
+							<input class='nocircle' type='radio' value='200' name='sensor_size'  id='radio3'/>
+							<label class='imgselect' for='radio3'>200x112</label>
+							<input class='nocircle' type='radio' value='300' name='sensor_size'  id='radio4' checked/>
+							<label class='imgselect' for='radio4'>300x168</label>
+						</div>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Une image</h6>
+					</section>
+					<!--------------------------->
+					<section>
+						<div class="definition">
+							<p>Une image est un ensemble de pixels $p$ structurés en grille.</p>
+							$I=\begin{pmatrix}
+								p(1,1) & ... & p(1,W) \\
+								\vdots & ... & \vdots \\
+								p(H,1) & ... & p(H,W) \\
+							\end{pmatrix}$
+							</br>
+							</br>
+						</div>
+						</br>
+						<div>
+						<small>Mathématiquement, on peut la représenter par une matrice.</small>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<p>L'information dans un pixel varie selon une image:</p>
+					</br>
+						<div style="overflow:hidden;text-align: center;">
+							<div style="width:33%;float:left;">
+								<img src='media/images/lena_nb.png' class='plain' style="width:180px;">
+								</br>
+								<small> en noir et blanc</small>
+							</div>
+							<div style="width:33%;float:left;">
+								<img src='media/images/lena_gris.png' class='plain' style="width:180px;">
+								</br>
+								<small> en niveaux de gris</small>
+							</div>
+							<div style="width:33%;float:left;">
+								<img src='media/images/lena_couleur.png' class='plain' style="width:180px;">
+								</br>
+								<small>en couleurs</small>
+							</div>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Image en noir et blanc</h6>
+						</br>
+						<p>Un pixel peut prendre deux valeurs :</p>
+						<small>0 (noir) ou 255 (blanc) (voire 0 ou 1 pour du binaire)</small>
+						<div style="overflow:hidden;text-align: center;">
+							</br>
+							<div style="width:50%;float:left;margin-top:10px;">
+								<div style="display:inline-block;margin:10px;" >
+									<div id="blackandwhiteimg" settings='{"matrixsize":["3","3"],
+									"pixelclass":"interactive-pixel","pixelsize":"55px",
+									"values":["0","255","0","255","255","255","0","255","0"]}'>
+									</div>
+								</div>
+							</div>
+							<div style="width:50%;float:left;margin-top:20px">
+								<div id='blackandwhitelatex'></div>
+							</div>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Image en niveaux de gris</h6>
+						<p>Un pixel prend une valeur discrète entre :</p>
+						<small>0 (noir) et 255 (blanc)</small>
+						<div class="slidecontainer" style="margin:auto;">
+						  <input type="range" min="0" max="255" value="125" class="slider" id="graycolorrange" style="display:inline-block;background-image: linear-gradient(to right, black, white);">
+							<div class="colorshow" id="graycolorshow" style="border:1px black solid;display:inline-block"></div>
+							<div id="graycolorshowtext" style="text-align:left;width:75px;display:inline-block"><small>0</small></div>
+						</div>
+					</br>
+						<div style="overflow:hidden;text-align: center;">
+							</br>
+							<div style="width:50%;float:left;margin-top:10px;">
+								<div id="grayimg" settings='{"matrixsize":["3","3"],
+								"pixelclass":"passive-pixel","pixelsize":"55px",
+								"values":["0","33","66","99","132","165","188","221","255"]}'>
+								</div>
+							</div>
+							<div style="width:50%;float:left;margin-top:10px">
+								<div id='graylatex'></div>
+							</div>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Image en couleurs (RGB)</h6>
+						<p>Un pixel contient 3 valeurs discrètes :</p>
+						<small> trois canaux de couleurs (<b>R</b>ed, <b>G</b>reen, <b>B</b>lue) chacun entre 0 et 255</small>
+						<div class="slidecontainer" style="margin:auto;">
+						  <input type="range" min="0" max="255" value="125" class="slider" id="redcolorrange" style="display:inline-block;background-image: linear-gradient(to right, black, red);">
+						</div>
+						<div class="slidecontainer" style="margin:auto;">
+							<input type="range" min="0" max="255" value="125" class="slider" id="greencolorrange" style="display:inline-block;background-image: linear-gradient(to right, black, green);">
+						</div>
+						<div class="slidecontainer" style="margin:auto;">
+							<input type="range" min="0" max="255" value="125" class="slider" id="bluecolorrange" style="display:inline-block;background-image: linear-gradient(to right, black, blue);">
+						</div>
+					</br>
+						<div style='margin:auto;'>
+						<div class="colorshow" id="redcolorshow" style="display:inline-block"></div>
+						<span>+</span>
+						<div class="colorshow" id="greencolorshow" style="display:inline-block"></div>
+						<span>+</span>
+						<div class="colorshow" id="bluecolorshow" style="display:inline-block"></div>
+						<span>=</span>
+						<div class="colorshow" id="rgbcolorshow" style="display:inline-block"><small>0</small></div>
+					</div>
+					</br>
+					<small>La couleur finale est obtenue sur l'écran.</small>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Image en couleurs (RGB)</h6>
+						<p>On peut donc la décomposer en 3 matrices :</p>
+						<button class="randomize" type="button" id="randomrgbimagebutton"></button>
+						<div style="overflow:hidden;text-align:center;margin:auto">
+							<div style="margin-top:10px;display:inline-block;width:250px;">
+								<div id="rgbrimg" settings='{"matrixsize":["3","3"],
+								"pixelclass":"passive-pixel","pixelsize":"35px",
+								"values":["125","125","125","125","125","125","125","125","125"]}'>
+								</div>
+								<div style="margin-top:10px;">
+									<small><div id='rgbrlatex'></div></small>
+								</div>
+							</div>
+							<div style="margin-top:10px;display:inline-block;width:250px;">
+								<div id="rgbgimg" settings='{"matrixsize":["3","3"],
+								"pixelclass":"passive-pixel","pixelsize":"35px",
+								"values":["125","125","125","125","125","125","125","125","125"]}'>
+								</div>
+								<div style="margin-top:10px;">
+									<small><div id='rgbglatex'></div></small>
+								</div>
+							</div>
+							<div style="margin-top:10px;display:inline-block;width:250px;">
+								<div id="rgbbimg" settings='{"matrixsize":["3","3"],
+								"pixelclass":"passive-pixel","pixelsize":"35px",
+								"values":["125","125","125","125","125","125","125","125","125"]}'>
+								</div>
+								<div style="margin-top:10px;">
+									<small><div id='rgbblatex'></div></small>
+								</div>
+							</div>
+						</div>
+					<div style="margin-top:20px;display:inline-block;width:250px;">
+						<div id="rgbimg" settings='{"matrixsize":["3","3"],
+						"pixelclass":"passive-pixel","pixelsize":"35px",
+						"values":["125","125","125","125","125","125","125","125","125"]}'>
+						</div>
+						<small style='margin-top:15px;'>Résultat à l'écran</small>
+					</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Plus généralement</h6>
+						<div class="definition">
+							<p>Une image 2D peut être représentée par un tenseur d'ordre $n\le3$.</p>
+							</br>
+							<ul>
+								<li>$n=2$ pour une image en N&amp;B ou en niveaux de gris</li>
+								<li>$n=3$ pour une image en couleurs</li>
+							</ul>
+						</div>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Prise en main d'OpenCV et de numpy</h6>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Pourquoi Numpy ?</h6>
+						<br>
+						<div style="margin:auto;width:100%;">
+							<div style="float:left;width:50%">
+								<small>
+								<b>Liste Python</b>
+								<br><br>
+								<code>
+									<font color="blue">ma_liste</font> = [1,2,3]
+								</code>
+								<br><br>
+								<code>
+									<font color="red">print</font>(2*<font color="blue">ma_liste</font>)
+								</code>
+								<br><br>
+							</small>
+							<p>&#8594; [1,2,3,1,2,3]</p>
+							</div>
+							<div style="float:left;width:50%">
+									<small>
+										<b>Array Numpy</b>
+									<br><br>
+									<code>
+										import numpy as np
+									</code>
+									<br><br>
+									<code>
+										<font color="blue">mon_array</font> = np.<font color="red">array</font>([1,2,3])
+									</code>
+									<br><br>
+									<code>
+										<font color="red">print</font>(2*<font color="blue">mon_array</font>)
+									</code>
+									<br><br>
+								</small>
+								<p>&#8594; [2,4,6]</p>
+							</div>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Travail en Numpy [lignes,colonnes]</h6>
+						<smallint>
+						<table>
+							<tr>
+								<td>composante (i,j)</td>
+								<td><code><font color="blue">mon_array</font>[i,j]</code></td>
+							</tr>
+							<tr>
+								<td>colonnes de la ligne i</td>
+								<td><code><font color="blue">mon_array</font>[i,:]</code></td>
+							</tr>
+							<tr>
+								<td>lignes de la colonne j</td>
+								<td><code><font color="blue">mon_array</font>[:,j]</code></td>
+							</tr>
+							<tr>
+								<td>toutes les composantes</td>
+								<td><code><font color="blue">mon_array</font>[:,:]</code></td>
+							</tr>
+							<tr>
+								<td>avec un tenseur 3</td>
+								<td><code><font color="blue">mon_array</font>[i,j,k]</code></td>
+							</tr>
+						</table>
+					</smallint>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Import d'OpenCV</h6>
+						<code>
+							import cv2
+						</code>
+					<br>
+					<br>
+						<h6>Chargement d'une image</h6>
+						<code>
+							<font color="blue">mon_image</font> = cv2.<font color="red">imread</font>('image.png')
+						</code>
+						<br><br>
+						<h6>Forme du tenseur</h6>
+						<code>
+							<font color="red">print</font>(<font color="blue">mon_image</font>.shape)
+						</code>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Affichage de l'image</h6>
+							<code>cv2.<font color="red">imshow</font>('nom_fenetre',<font color="blue">mon_image</font>)</code></br>
+							<code>cv2.<font color="red">waitKey</font>()</code>
+						</br>
+						</br>
+						<div class='todo'>
+							<p>Afficher les composantes RGB de l'image à l'écran.</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Conversion en niveaux de gris</h6>
+						<code><font color="blue">mon_image_grise</font> = cv2.<font color="red">cvtColor</font>(<font color="blue">mon_image</font>,cv2.COLOR_BGR2GRAY)</code>
+						</br>
+						</br>
+						<div class="selonvous">
+							<p>En pratique, comment passe-t-on du RGB aux niveaux de gris ?</p>
+						</div>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Opérations sur les images</h6>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Des opérations importantes</h6>
+						<ol>
+							<li>Binarisation/Segmentation : seuillage</li>
+							<li>Morphologie : érosion et dilatation</li>
+							<li>Géométrie : détection de contours</li>
+							<li>Transformation : homographie</li>
+						</ol>
+					</br>
+					</br>
+						<h6>pour plus tard...</h6>
+						<ul>
+							<li>Filtrage : La convolution</li>
+						</ul>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Binarisation / segmentation</h6>
+						<p>Le seuillage</p>
+					</section>
+					<section>
+						<h6>Le seuillage - théorie</h6>
+						<div class="definition">
+							Passage du niveau de gris au binaire via un seuil $T$ :</br>
+							<p style="text-align:center;">$\forall p \in I, p =
+								\begin{cases}
+								0,  & \text{si $p < T$} \\[2ex]
+								255, & \text{sinon}
+								\end{cases}$
+							</p>
+						</div>
+						<div style="overflow:hidden;text-align: center;">
+							</br>
+							<div style="width:40%;float:left;margin-top:10px;">
+								<small><div id="thresholdlatex" values='{"values":["0","31","62","93","124","155","186","217","255"]}'></div></small>
+							</div>
+							<div style="width:10%;float:left;margin-top:30px;margin-left:30px;">
+								&#8594;
+							</div>
+							<div style="width:40%;float:left;">
+								<div style="display:inline-block;margin:10px;" >
+									<div id="thresholdimg" settings='{"matrixsize":["3","3"],
+									"pixelclass":"passive-pixel","pixelsize":"35px",
+									"values":["255","255","255","255","255","255","255","255","255"]}'>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="thinslidecontainer" style="margin:auto;">
+							<input type="range" min="0" max="255" value="0" class="thinslider" id="thresholdslider" style="display:inline-block;"></br>
+							<span id="thresholdslidervalue"></span>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Le seuillage - pratique</h6>
+						</br>
+						<div class="todo">
+							<p>Réaliser un seuillage avec $T=170$ sur l'image de Lena en niveaux de gris.</br>Afficher ensuite le résultat à l'écran.</p>
+						</div>
+						</br>
+						<div class="selonvous">
+							<p>Quelle peut-être l'utilité de cette opération ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Seuillage - solutions (1)</h6>
+						</br>
+						<small style="text-align:left">
+							<code><font color="blue">img_rgb</font> = cv2.<font color="red">imread</font>('lena.png')</code></br>
+							<code><font color="blue">img_gray</font> = cv2.<font color="red">cvtColor</font>(<font color="blue">img_rgb</font>,cv2.COLOR_BGR2GRAY)</code></br>
+							<code>for i in range(<font color="blue">img_gray</font>.shape[0]):</code></br>
+							<code>&emsp;&emsp;for j in range(<font color="blue">img_gray</font>.shape[1]):</code></br>
+							<code>&emsp;&emsp;&emsp;&emsp;if <font color="blue">img_gray</font>[i,j] < 170:</code></br>
+							<code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<font color="blue">img_gray</font>[i,j] = 0</code></br>
+							<code>&emsp;&emsp;&emsp;&emsp;else:</code></br>
+							<code>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<font color="blue">img_gray</font>[i,j] = 255</code></br>
+							<code>cv2.<font color="red">imshow</font>('resultat',<font color="blue">img_gray</font>)</code></br>
+							<code>cv2.<font color="red">waitKey</font>()</code></br>
+						</small>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Seuillage - solutions (2)</h6>
+						</br>
+						<small style="text-align:left">
+							<code><font color="blue">img_rgb</font> = cv2.<font color="red">imread</font>('lena.png')</code></br>
+							<code><font color="blue">img_gray</font> = cv2.<font color="red">cvtColor</font>(<font color="blue">img_rgb</font>,cv2.COLOR_BGR2GRAY)</code></br>
+							<code><font color="blue">img_gray</font>[<font color="blue">img_gray</font> < 170] = 0</code></br>
+							<code><font color="blue">img_gray</font>[<font color="blue">img_gray</font> > 0] = 255</code></br>
+							<code>cv2.<font color="red">imshow</font>('resultat',<font color="blue">img_gray</font>)</code></br>
+							<code>cv2.<font color="red">waitKey</font>()</code></br>
+						</small>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Seuillage - solutions (3)</h6>
+						</br>
+						<small style="text-align:left">
+							<code><font color="blue">img_rgb</font> = cv2.<font color="red">imread</font>('lena.png')</code></br>
+							<code><font color="blue">img_gray</font> = cv2.<font color="red">cvtColor</font>(<font color="blue">img_rgb</font>,cv2.COLOR_BGR2GRAY)</code></br>
+							<code>_,<font color="blue">img_bin</font> = cv2.<font color="red">threshold</font>(<font color="blue">img_gray</font>,170,255,cv2.THRESH_BINARY)</code></br>
+							<code>cv2.<font color="red">imshow</font>('resultat',<font color="blue">img_bin</font>)</code></br>
+							<code>cv2.<font color="red">waitKey</font>()</code></br>
+						</small>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Morphologie</h6>
+						<p>Érosion et dilatation</p>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Érosion et dilatation</h6>
+						<p>Travail sur le <b>voisinage</b> d'un pixel binaire pour recréer une image.</p>
+						</br>
+						<div class="selonvous">
+							<p>Qu'est-ce que le voisinage d'un pixel ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Le voisinage d'un pixel</h6>
+							<div class="definition">
+								<p>Le voisinage d'un pixel peut être défini par une taille et une connectivité.</p>
+								<div style="display:inline-block;margin:10px;" >
+									<div id="connectivity4image" settings='{"matrixsize":["3","3"],
+									"pixelclass":"passive-pixel","pixelsize":"35px",
+									"values":["0","255","0","255","255","255","0","255","0"]}'>
+									</div>
+									<small>4-connectivité 3x3</small>
+								</div>
+								<div style="display:inline-block;margin:10px;" >
+									<div id="connectivity8image" settings='{"matrixsize":["3","3"],
+									"pixelclass":"passive-pixel","pixelsize":"35px",
+									"values":["255","255","255","255","255","255","255","255","255"]}'>
+									</div>
+									<small>8-connectivité 3x3</small>
+								</div>
+								<div style="display:inline-block;margin:10px;" >
+									<div id="connectivity4image5" settings='{"matrixsize":["5","5"],
+									"pixelclass":"passive-pixel","pixelsize":"35px",
+									"values":["0","0","255","0","0","0","255","255","255","0","255","255","255","255","255","0","255","255","255","0","0","0","255","0","0"]}'>
+									</div>
+									<small>4-connectivité 5x5</small>
+								</div>
+								<div style="display:inline-block;margin:10px;" >
+									<div id="connectivity8image5" settings='{"matrixsize":["5","5"],
+									"pixelclass":"passive-pixel","pixelsize":"35px",
+									"values":["255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255","255"]}'>
+									</div>
+									<small>8-connectivité 5x5</small>
+								</div>
+							</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Érosion - théorie</h6>
+						<div class="definition">
+							<p>Un pixel est mis à 255 dans la nouvelle image si :</br>
+								- tous les pixels de son voisinage sont à 255</br>
+								- sinon il est mis à 0
+							</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Érosion - pratique</h6>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="kernelerosion" settings='{"matrixsize":["3","3"],
+							"pixelclass":"interactive-pixel","pixelsize":"45px",
+							"values":["0","255","0","255","255","255","0","255","0"]}'>
+							</div>
+							<small>voisinage</small>
+						</div>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="erosionimage" settings='{"matrixsize":["5","5"],
+							"pixelclass":"interactive-pixel","pixelsize":"55px",
+							"values":["255","255","0","0","0",
+							"255","255","255","255","0",
+							"255","255","255","255","0",
+							"0","255","255","255","255",
+							"0","0","255","255","255"]}'>
+							</div>
+							<small>image source</small>
+						</div>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="erosionimageresult" settings='{"matrixsize":["5","5"],
+							"pixelclass":"passive-pixel","pixelsize":"55px",
+							"values":["0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0"]}'>
+							</div>
+							<small>nouvelle image</small>
+						</div>
+						<div style="width:100%;margin:auto;">
+							<button class="runprocess" type="button" id="erodeall"></button>
+							<button class="restartprocess" type="button" id="unerodeall"></button>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Dilatation - théorie</h6>
+						<div class="definition">
+							<p>Un pixel est mis à 255 dans la nouvelle image si :</br>
+								- au moins l'un des pixels de son voisinage est à 255</br>
+								- sinon il est mis à 0
+							</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Dilatation - pratique</h6>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="kerneldilatation" settings='{"matrixsize":["3","3"],
+							"pixelclass":"interactive-pixel","pixelsize":"45px",
+							"values":["0","255","0","255","255","255","0","255","0"]}'>
+							</div>
+							<small>voisinage</small>
+						</div>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="dilatationimage" settings='{"matrixsize":["5","5"],
+							"pixelclass":"interactive-pixel","pixelsize":"55px",
+							"values":["255","0","0","0","0",
+							"0","255","0","0","0",
+							"0","255","255","0","0",
+							"0","0","255","255","0",
+							"0","0","0","0","255"]}'>
+							</div>
+							<small>image source</small>
+						</div>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="dilatationimageresult" settings='{"matrixsize":["5","5"],
+							"pixelclass":"passive-pixel","pixelsize":"55px",
+							"values":["0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0",
+							"0","0","0","0","0"]}'>
+							</div>
+							<small>nouvelle image</small>
+						</div>
+						<div style="width:100%;margin:auto;">
+							<button class="runprocess" type="button" id="dilateall"></button>
+							<button class="restartprocess" type="button" id="undilateall"></button>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Des compléments</h6>
+						<div class="definition">
+							<p>Une ouverture : une érosion puis une dilatation</br>
+								Une fermeture : une dilatation puis une érosion</p>
+						</div>
+						</br>
+						<div class="selonvous">
+							<p>Quelle est l'utilité de ces opérations ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Vérifions la théorie</h6>
+						<p>Kernel, ouverture et fermeture</p>
+						<small>
+							<code><font color="blue">kernel</font> = cv2.<font color="red">getStructuringElement</font>(cv2.MORPH_CROSS,(3,3))</br>
+							<font color="blue">img_ouv</font> = cv2.<font color="red">morphologyEx</font>(<font color="blue">img_bin</font>,cv2.MORPH_OPEN,<font color="blue">kernel</font>)</br>
+							<font color="blue">img_ferm</font> = cv2.<font color="red">morphologyEx</font>(<font color="blue">img_bin</font>,cv2.MORPH_CLOSE,<font color="blue">kernel</font>)
+							</code>
+						</small>
+						</br>
+						</br>
+						<div class="todo">
+							<p>Appliquer une ouverture et une fermeture sur la précédente image de Lena <b>binaire</b>.</br>
+								Comparer visuellement les résultats et conclure.
+							</p>
+						</div>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Géométrie</h6>
+						<p>Détection de contours</p>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Intuition</h6>
+						<div style="display:inline-block;margin:10px;" >
+							<div id="imagecontours" settings='{"matrixsize":["7","7"],
+							"pixelclass":"passive-pixel","pixelsize":"45px",
+							"values":["0","0","0","0","0","0","0",
+							"0","0","255","255","255","0","0",
+							"0","255","255","255","255","255","0",
+							"0","255","255","255","255","255","0",
+							"0","255","255","255","255","255","0",
+							"0","0","255","255","255","0","0",
+							"0","0","0","0","0","0","0"]}'>
+							</div>
+						</div>
+						<div class="selonvous">
+							<p>Comment trouver le contour extérieur d'une région ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>OpenCV - Préparation</h6>
+						</br>
+						<div class="todo">
+							<p>Importez l'image <i>"logo.jpeg"</i>, convertissez-la en niveaux de gris puis appliquez un seuillage avec $T=100$.</br>Affichez le résultat à l'écran.</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>OpenCV - Détection de contours</h6>
+						</br>
+						<code>
+							<small>
+							_,<font color="blue">contours</font>,_ = cv2.<font color="red">findContours</font>(<font color="blue">img_bin</font>,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+							</small>
+						</code>
+						</br>
+						</br>
+						<div class="todo">
+							Que contient la variable <font color="blue">contours</font> ?</br>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>OpenCV - Affichage des contours</h6>
+							<small>
+								Tous les contours :</br>
+								<code>
+									cv2.<font color="red">drawContours</font>(<font color="blue">img_rgb</font>,<font color="blue">contours</font>,-1,(0,0,255),2)
+								</code></br></br>
+								Le i-ème contour :</br>
+								<code>
+									cv2.<font color="red">drawContours</font>(<font color="blue">img_rgb</font>,<font color="blue">contours</font>,i,(0,0,255),2)
+								</code></br></br>
+								Affichage :</br>
+								<code>
+									cv2.<font color="red">imshow</font>('resultat',<font color="blue">img_rgb</font>)</br>
+									cv2.<font color="red">waitKey</font>()
+								</code>
+							</small>
+						</br>
+						</br>
+						<div class="todo">
+							Combien de points semblent composer le contour 18 ?</br>
+							Vérifiez dans la liste <font color="blue">contours</font>.
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>OpenCV - Simplification des contours</h6>
+						<small>
+							<code>
+								<font color="blue">perim_cnt</font> = cv2.<font color="red">arcLength</font>(<font color="blue">contours</font>[18], True)</br></br>
+	    					<font color="blue">cnt_simp</font> = cv2.<font color="red">approxPolyDP</font>(<font color="blue">contours</font>[18],0.01*<font color="blue">perim_cnt</font>,True)
+							</code>
+						</small>
+						</br>
+						</br>
+						<div class="todo">
+							<p>Combien de points composent le nouveau contour 18 ?</br>
+								Comparer visuellement la différence avec l'ancien.
+						</div>
+					</section>
+				</section>
+				<!--------------------------->
+				<section>
+					<section>
+						<h6>Transformations</h6>
+						<p>Homographie</p>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Deux familles parmi les transformations</h6>
+						</br>
+						<ul>
+							<li>Affines</br> - Conservent le parallèlisme</li></br>
+							<li>Perspectives</br> - Conservent les lignes droites</li>
+						</ul>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Transformations affines</h6>
+						<p>Définies par une matrice $M$ $(2\times3)$ entre une image source et destination.</p>
+						</br>
+						$$(i',j') = (M_{11}i + M_{12}j + M_{13} , M_{21}i + M_{22}j + M_{23})$$</br>
+						$${img}_{dst}(i,j)={img}_{src}(i',j')$$
+						<div class="selonvous">
+							<p>Comment peut-on faire une translation, rotation ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Vérifications</h6>
+							<small>
+								$M_R=\begin{pmatrix} 0 & 0 & T_X \\ 0 & 0 & T_Y \end{pmatrix}$
+								&nbsp;&nbsp;$M_R=\begin{pmatrix} cos(\alpha) & -sin(\alpha) & 0 \\ sin(\alpha) & cos(\alpha) & 0 \end{pmatrix}$
+								</br>
+								</br>
+								<code>
+									<font color="blue">M</font> = np.array([[m11,m12,m13],[m21,m22,m23]],np.float32)</br></br>
+									<font color="blue">img_dst</font> = cv2.<font color="red">warpAffine</font>(<font color="blue">img_src</font>, <font color="blue">M</font>, (<font color="blue">img_src</font>.shape[1],<font color="blue">img_src</font>.shape[0]))
+								</code>
+							</small>
+							</br>
+							</br>
+							<div class="todo">
+								<p>Vérifiez le résultat pour des petites rotations et translations.</p>
+							</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Transformations perspectives</h6>
+						<p>Définies par une matrice $M$ $(3\times3)$ entre une image source et destination.</p>
+						</br>
+						$$(i',j') = \frac{(M_{11}i + M_{12}j + M_{13},M_{21}i + M_{22}j + M_{23})}{M_{31}i + M_{32}j + M_{33}}$$</br>
+						$${img}_{dst}(i,j)={img}_{src}(i',j')$$
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Transformations perspectives</h6>
+						<small>
+							$$M=\begin{pmatrix} 1.52e^{-1} & -6.34e^{-2} & 8.00e^{+1} \\ -5.33e^{-2} & 2.08e^{-1} & 5.00e^{+1} \\ -1.39e^{-3} & 6.34e^{-5} & 1.00e^{+0}\end{pmatrix}$$
+						</br></br>
+							<code>
+								<font color="blue">img_dst</font> = cv2.<font color="red">warpPerspective</font>(<font color="blue">img_src</font>, <font color="blue">M</font>, (<font color="blue">img_src</font>.shape[1],<font color="blue">img_src</font>.shape[0]))
+							</code>
+						</small>
+						</br>
+						</br>
+						<div class="todo">
+							<p>Appliquez cette opération sur l'image <i>"rectangle.jpeg"</i>.</br>
+								Quelle va être l'utilité d'une telle transformation ?</p>
+						</div>
+					</section>
+					<!--------------------------->
+					<section>
+						<h6>Transformations perspectives</h6>
+						<small>La matrice $M$ est calculée par une correspondance de 4 paires de points</small>
+						</br>
+						<div style="width:100%">
+						<svg id="perspectivesvgsource" width="300px" height="300px">
+							<defs>
+									<marker id="startarrow" markerWidth="10" markerHeight="7"
+									refX="10" refY="3.5" orient="auto">
+										<polygon points="10 1, 10 6, 5 3.5" fill="red" />
+									</marker>
+									<marker id="endarrow" markerWidth="10" markerHeight="7"
+									refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+											<polygon points="0 1, 5 3.5, 0 6" fill="red" />
+									</marker>
+									<marker id="endarrowflat" markerWidth="10" markerHeight="8"
+									refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+											<polygon points="0 0, 10 4, 0 8" fill="black" />
+									</marker>
+								</defs>
+							<line x1="0" y1="0" x2="250" y2="0" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+							<line x1="0" y1="0" x2="0" y2="250" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+							<circle class="draggablePoint" id = "src0" cx="40" cy="40" r="8" stroke="black" stroke-width="1" fill="red" />
+							<circle class="draggablePoint" id = "src1" cx="200" cy="40" r="8" stroke="black" stroke-width="1" fill="blue" />
+							<circle class="draggablePoint" id = "src2" cx="200" cy="200" r="8" stroke="black" stroke-width="1" fill="green" />
+							<circle class="draggablePoint" id = "src3" cx="40" cy="200" r="8" stroke="black" stroke-width="1" fill="black" />
+							<text x="250" y="20" font-family="Verdana" font-size="18">X</text>
+							<text x="10" y="250" font-family="Verdana" font-size="18">Y</text>
+							<text x="100" y="270" font-family="Verdana" font-size="18">Source</text>
+						</svg>
+						&#8594;
+						<svg id="perspectivesvgdest" width="300px" height="300px">
+							<defs>
+									<marker id="startarrow" markerWidth="10" markerHeight="7"
+									refX="10" refY="3.5" orient="auto">
+										<polygon points="10 1, 10 6, 5 3.5" fill="red" />
+									</marker>
+									<marker id="endarrow" markerWidth="10" markerHeight="7"
+									refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+											<polygon points="0 1, 5 3.5, 0 6" fill="red" />
+									</marker>
+									<marker id="endarrowflat" markerWidth="10" markerHeight="8"
+									refX="0" refY="3.5" orient="auto" markerUnits="strokeWidth">
+											<polygon points="0 0, 10 4, 0 8" fill="black" />
+									</marker>
+								</defs>
+							<line x1="0" y1="0" x2="250" y2="0" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+							<line x1="0" y1="0" x2="0" y2="250" stroke-dasharray="5, 5"  style="stroke:rgb(0,0,0);stroke-width:1" marker-end="url(#endarrowflat)"/>
+							<circle class="draggablePoint" id = "src0" cx="40" cy="40" r="8" stroke="black" stroke-width="1" fill="red" />
+							<circle class="draggablePoint" id = "src1" cx="200" cy="40" r="8" stroke="black" stroke-width="1" fill="blue" />
+							<circle class="draggablePoint" id = "src2" cx="200" cy="200" r="8" stroke="black" stroke-width="1" fill="green" />
+							<circle class="draggablePoint" id = "src3" cx="40" cy="200" r="8" stroke="black" stroke-width="1" fill="black" />
+							<text x="250" y="20" font-family="Verdana" font-size="18">X</text>
+							<text x="10" y="250" font-family="Verdana" font-size="18">Y</text>
+							<text x="100" y="270" font-family="Verdana" font-size="18">Destination</text>
+						</svg>
+						</div>
+						<div style="width:100%">
+							<small>
+								<div id="perspectivelatex" style="display:inline-block;float:left;margin-top:20px;" values='{"values":["0","0","0","0","0","0","0","0","0"]}'></div>
+							</small>
+						</div>
+					</section>
+					<section>
+						<h6>Transformations perspectives</h6>
+						<p>Correction de la perspective</p>
+						<small>
+							<code>
+								<font color="blue">pts_src</font> = np.<font color="red">array</font>([[80,50],[400,70],[300,300],[50,140]],np.float32)</br></br>
+								<font color="blue">pts_dst</font> = np.<font color="red">array</font>([[0,0],[450,0],[450,450],[0,450]],np.float32)</br></br>
+								<font color="blue">M</font> = cv2.<font color="red">getPerspectiveTransform</font>(<font color="blue">pts_src</font>,<font color="blue">pts_dst</font>)
+							</code>
+						</small>
+						<div class="todo">
+							<p>Réaliser la transformation précédente sur l'image <i>"rectangle_persp.jpeg"</i>.</br>
+								Conclure.</p>
+						</div>
+					</section>
+				</section>
+			</div>
+		</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+		<script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML'></script>
+		<script type="text/x-mathjax-config"> MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});</script>
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+		<script src="node_modules/cropperjs/dist/cropper.js"></script>
+
+		<script src="js/boxes.js"></script>
+		<script src="js/libs.js"></script>
+		<script src="js/scripts.js"></script>
+		<script src="js/start.js"></script>
+
+		<script>
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'node_modules/opencv.js/opencv.js' },
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'bower_components/reveal.js-plugins/menu/menu.js' }				]
+			});
+		</script>
+	</body>
+</html>
